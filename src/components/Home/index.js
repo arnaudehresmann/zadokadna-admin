@@ -10,8 +10,10 @@ class HomePage extends Component {
     zadokaDay: "",
     zadokaFileName: "",
     isUploading: false,
+    error: undefined,
     progress: 0,
-    zadokaUrl: ""
+    zadokaUrl: "",
+    files: [],
   };
 
   constructor(props) {
@@ -23,11 +25,11 @@ class HomePage extends Component {
   handleUploadStart = () => this.setState({ isUploading: true, progress: 0 });
   handleProgress = progress => this.setState({ progress });
   handleUploadError = error => {
-    this.setState({ isUploading: false });
+    this.setState({ isUploading: false, error: error });
     console.error(error);
   };
   handleUploadSuccess = filename => {
-    this.setState({ zadokaFileName: filename, progress: 100, isUploading: false });
+    this.setState({ zadokaFileName: filename, progress: 100, isUploading: false, error: undefined });
     firebase
       .storage()
       .ref("daily")
@@ -37,6 +39,33 @@ class HomePage extends Component {
 
     db.doAddDailyZadoka(this.state.zadokaDay, filename);
   };
+
+  customOnChangeHandler = (event) => {
+    const  files = event.target.files;
+    const filesToStore = [];
+
+    for(let i = 0; i < files.length; i++) {
+      filesToStore.push(files.item(i));
+    }
+
+    this.setState({ files: filesToStore });
+  }
+
+  startUploadManually = () => {
+    const { files } = this.state;
+    files.forEach(file => {
+      this.fileUploader.startUpload(file)
+    });
+  }
+
+  renderStatus() {
+    if(this.state.isUploading){
+      return(<label>Uploading</label>)
+    } else if(this.state.error){
+      return(<label>ERROR: {this.state.error}</label>)
+    }
+    return null;
+  }
 
   render() {
     return(
@@ -55,8 +84,12 @@ class HomePage extends Component {
             onUploadError={this.handleUploadError}
             onUploadSuccess={this.handleUploadSuccess}
             onProgress={this.handleProgress}
+            onChange={this.customOnChangeHandler} // ⇐ Call your handler
+            ref={instance => { this.fileUploader = instance; } }  // ⇐ reference the component
           />
         </form>
+        <button onClick={this.startUploadManually}>Upload</button>
+        {this.renderStatus()}
       </div>
     </div>  
     )}
