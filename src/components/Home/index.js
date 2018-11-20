@@ -7,7 +7,7 @@ import { db } from '../../firebase'
 class HomePage extends Component {
 
   state = {
-    zadokaDay: "",
+    zadokaStartDay: "",
     zadokaFileName: "",
     isUploading: false,
     error: undefined,
@@ -21,23 +21,24 @@ class HomePage extends Component {
   }
 
   onFileNameChanged = event =>
-    this.setState({ zadokaDay: event.target.value });
+    this.setState({ zadokaStartDay: event.target.value });
   handleUploadStart = () => this.setState({ isUploading: true, progress: 0 });
   handleProgress = progress => this.setState({ progress });
   handleUploadError = error => {
     this.setState({ isUploading: false, error: error });
     console.error(error);
   };
-  handleUploadSuccess = filename => {
+  handleUploadSuccess = async filename => {
     this.setState({ zadokaFileName: filename, progress: 100, isUploading: false, error: undefined });
-    firebase
+    const downloadURL = await firebase
       .storage()
       .ref("daily")
       .child(filename)
-      .getDownloadURL()
-      .then(url => this.setState({ zadokaUrl: url }));
+      .getDownloadURL();
 
-    db.doAddDailyZadoka(this.state.zadokaDay, filename);
+      await db.doAddDailyZadoka(this.state.zadokaStartDay, filename);
+      this.incZadokaDay();
+
   };
 
   customOnChangeHandler = (event) => {
@@ -58,6 +59,24 @@ class HomePage extends Component {
     });
   }
 
+  incZadokaDay() {
+    const current = this.state.zadokaStartDay;
+    const year = current.substr(0, 4);
+    const month = current.substr(4, 2);
+    const day = current.substr(6, 2);
+    const currentDate = new Date(year, month, day);
+    const nextDay = this.addDays(currentDate, 1);
+    const nextZadoka = nextDay.getFullYear().toString() + ("0"+(nextDay.getMonth()+1)).slice(-2) + ("0" + nextDay.getDate()).slice(-2);
+    
+    this.setState({zadokaStartDay: nextZadoka});
+  }
+
+  addDays(date, days) {
+    var result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
   renderStatus() {
     if(this.state.isUploading){
       return(<label>Uploading</label>)
@@ -76,6 +95,7 @@ class HomePage extends Component {
         <form>
           <input type="text" name="zadokaDay" onChange={this.onFileNameChanged} />
           <FileUploader
+            multiple
             accept="image/*"
             name="avatar"
             randomizeFilename
