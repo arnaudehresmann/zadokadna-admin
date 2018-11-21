@@ -62,7 +62,7 @@ class HomePage extends Component {
   incZadokaDay() {
     const current = this.state.zadokaStartDay;
     const year = current.substr(0, 4);
-    const month = current.substr(4, 2);
+    const month = parseInt(current.substr(4, 2)) - 1;
     const day = current.substr(6, 2);
     const currentDate = new Date(year, month, day);
     const nextDay = this.addDays(currentDate, 1);
